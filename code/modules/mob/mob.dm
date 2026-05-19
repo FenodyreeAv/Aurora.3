@@ -7,6 +7,7 @@
 	GLOB.mob_list -= src
 	GLOB.dead_mob_list -= src
 	GLOB.living_mob_list -= src
+	GLOB.player_list -= src
 	unset_machine()
 	QDEL_NULL(hud_used)
 
@@ -70,7 +71,6 @@
 	i_select = null
 	m_select = null
 	toxin = null
-	fire = null
 	bodytemp = null
 	healths = null
 	throw_icon = null
@@ -545,7 +545,7 @@
 
 	to_chat(usr, "You can respawn now, enjoy your new life!")
 	log_game("[usr.name]/[usr.key] used abandon mob.")
-	to_chat(usr, SPAN_NOTICE("<B>Make sure to play a different character, and please roleplay correctly!</B>"))
+	to_chat(usr, SPAN_NOTICE("<B>If you died, make sure to play a different character, and remember to roleplay correctly!</B>"))
 
 	client?.screen.Cut()
 	if(!client)
@@ -767,6 +767,11 @@
 		if(length(M.grabbed_by))
 			to_chat(src, SPAN_WARNING("You can't pull someone being held in a grab!"))
 			return
+
+		for (var/obj/item/grab/G in list(M.l_hand, M.r_hand))
+			if(G && G.state >= GRAB_AGGRESSIVE)
+				to_chat(src, SPAN_WARNING("You can't pull both people at once, break the grab first!"))
+				return
 
 		// If your size is larger than theirs and you have some
 		// kind of mob pull value AT ALL, you will be able to pull
@@ -1312,7 +1317,7 @@
 	else
 		throw_mode_on()
 
-#define THROW_MODE_ICON 'icons/effects/cursor/throw_mode.dmi'
+#define THROW_MODE_ICON 'icons/hud/cursor/throw_mode.dmi'
 
 /mob/proc/throw_mode_off()
 	src.in_throw_mode = 0

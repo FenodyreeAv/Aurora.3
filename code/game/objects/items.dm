@@ -4,6 +4,8 @@
 	w_class = WEIGHT_CLASS_NORMAL
 	light_system = MOVABLE_LIGHT
 	blocks_emissive = EMISSIVE_BLOCK_GENERIC
+	/// Generic hit sound
+	hitsound = SFX_SWING_HIT
 
 	/// This saves our blood splatter overlay, which will be processed not to go over the edges of the sprite
 	var/image/blood_overlay
@@ -11,12 +13,8 @@
 	var/randpixel = 6
 	var/abstract = 0
 	var/r_speed = 1.0
-	var/health
 	var/burn_point
 	var/burning
-
-	/// Generic hit sound
-	var/hitsound = SFX_SWING_HIT
 
 	var/storage_cost
 
@@ -151,10 +149,6 @@
 	/// Sound uses when dropping the item, or when its thrown.
 	var/drop_sound = SFX_DROP
 
-	var/list/armor
-	/// How fast armor will degrade, multiplier to blocked damage to get armor damage value.
-	var/armor_degradation_speed
-
 	//Item_state definition moved to /obj
 	//var/item_state = null // Used to specify the item state for the on-mob overlays.
 
@@ -240,19 +234,25 @@
 	/// Requires the usual implementation requirements for new persistent types but provides a single implementation for trash logic
 	var/persistency_considered_trash = FALSE
 
-	/// How a tool acts when you use it on something, such as wirecutters cutting wires while multitools measure power
+	/**
+	 * How a tool acts when you use it on something, such as wirecutters cutting wires while multitools measure power.
+	 * This merely sets the initial starting tool quality for a given tool.
+	 * If a tool wants to have more than one quality, it can do so via SET_TOOL_QUALITIES() in its own Initialize() call
+	 *
+	 * Do note that this is merely just an expedience for /obj/item. Any /atom/ is allowed to have tool qualities.
+	 */
 	var/tool_behaviour = null
+	/// Determines the starting tool level for a tool's basic use if any. tool_behavior must be set for this to apply.
+	var/tool_quality = STANDARD_TOOL_LEVEL
 
 /obj/item/Initialize(mapload, ...)
 	. = ..()
-	if(islist(armor))
-		for(var/type in armor)
-			if(armor[type])
-				AddComponent(/datum/component/armor, armor)
-				break
 	if(item_flags & ITEM_FLAG_HELD_MAP_TEXT)
 		set_initial_maptext()
 		check_maptext()
+
+	if (tool_behaviour)
+		LOAD_TOOL_QUALITIES(src, alist(tool_behavior = tool_quality), toolComp)
 
 /obj/item/Destroy()
 	if(ismob(loc))
@@ -345,7 +345,7 @@
 
 	. = ..(user, distance, is_adjacent, "It is a [size] item.", get_extended = get_extended)
 	var/datum/component/armor/armor_component = GetComponent(/datum/component/armor)
-	if(armor_component)
+	if(armor_component && !armor_component.hidden)
 		. += FONT_SMALL(SPAN_NOTICE("\[?\] This item has armor values. <a href='byond://?src=[REF(src)];examine_armor=1'>\[Show Armor Values\]</a>"))
 
 /obj/item/Topic(href, href_list)
@@ -506,8 +506,8 @@
 	if(!persistency_considered_trash)
 		return
 
-	if(in_storage) // Items getting moved into storages (lunchboxes, backpacks) triggers the dropped handler and requires no persistency as a result
-		SSpersistence.deregister_track(src)
+	if(in_storage || in_inventory) // Items getting moved into storages (lunchboxes, backpacks) triggers the dropped handler and requires no persistency as a result
+		SSpersistence.objectsDeregisterTrack(src)
 		return
 
 	// Trash-like items should become only persistent when they are not dropped in an area flagged with AREA_FLAG_PREVENT_PERSISTENT_TRASH
@@ -515,12 +515,12 @@
 	if(T)
 		var/area/A = get_area(T)
 		if(A && !(A.area_flags & AREA_FLAG_PREVENT_PERSISTENT_TRASH))
-			persistance_expiration_time_days = 3 // Ensure expiration date is set to prevent long term trash
-			SSpersistence.register_track(src, usr == null ? null : ckey(usr.key))
+			persistant_objects_expiration_time_days = 3 // Ensure expiration date is set to prevent long term trash
+			SSpersistence.objectsRegisterTrack(src, usr == null ? null : ckey(usr.key))
 			return
 
 	// Fallback - No persistency
-	SSpersistence.deregister_track(src)
+	SSpersistence.objectsDeregisterTrack(src)
 
 /obj/item/proc/remove_item_verbs(mob/user)
 	if(ismech(user)) //very snowflake, but necessary due to how mechs work
@@ -554,6 +554,7 @@
 		addtimer(CALLBACK(src, PROC_REF(check_maptext)), 1) // invoke async does not work here
 	in_inventory = TRUE
 	do_pickup_animation(user)
+	try_make_persistent_trash()
 
 // called when this item is removed from a storage item, which is passed on as S. The loc variable is already set to the new destination before this is called.
 /obj/item/proc/on_exit_storage(obj/item/storage/S as obj)
@@ -729,7 +730,7 @@ GLOBAL_LIST_INIT(slot_flags_enumeration, list(
 				if(!disable_warning)
 					to_chat(usr, SPAN_WARNING("You somehow have a suit with no defined allowed items for suit storage, stop that."))
 				return 0
-			if(!istype(src, /obj/item/modular_computer) && tool_behaviour == TOOL_PEN && !is_type_in_list(src, H.wear_suit.allowed))
+			if(!istype(src, /obj/item/modular_computer) && tool_behaviour != TOOL_PEN && !is_type_in_list(src, H.wear_suit.allowed))
 				return 0
 		if(slot_handcuffed)
 			if(!istype(src, /obj/item/handcuffs))

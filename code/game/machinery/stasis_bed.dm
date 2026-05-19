@@ -20,7 +20,7 @@
 	var/stasis_can_toggle = 0
 
 	/// The amount of Stasis Value that this machine provides to an occupant.
-	var/stasis_power = 10
+	var/stasis_power = 6
 
 	/**
 	 * The type of stasis this machine provides to an occupant.
@@ -56,8 +56,8 @@
 	update_icon()
 
 /obj/machinery/stasis_bed/Destroy()
-	. = ..()
 	QDEL_NULL(mattress_on)
+	return ..()
 
 /obj/machinery/stasis_bed/attackby(obj/item/attacking_item, mob/user)
 	if(default_part_replacement(user, attacking_item))

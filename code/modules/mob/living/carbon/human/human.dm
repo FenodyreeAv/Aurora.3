@@ -142,6 +142,8 @@
 	QDEL_NULL(back)
 	QDEL_NULL(l_hand)
 	QDEL_NULL(r_hand)
+	QDEL_NULL(wrists)
+	QDEL_NULL(pants)
 	// Do this last so the mob's stuff doesn't drop on del.
 	QDEL_NULL(w_uniform)
 
@@ -326,13 +328,15 @@
 			if (prob(50))
 				Paralyse(10)
 
+	var/target_zone = ran_zone()
+
 	// focus most of the blast on one organ
-	apply_damage(0.7 * b_loss, DAMAGE_BRUTE, null, DAMAGE_FLAG_EXPLODE, used_weapon = "Explosive blast")
-	apply_damage(0.7 * f_loss, DAMAGE_BURN, null, DAMAGE_FLAG_EXPLODE, used_weapon = "Explosive blast")
+	apply_damage(0.7 * b_loss, DAMAGE_BRUTE, target_zone, "Explosive blast", DAMAGE_FLAG_EXPLODE)
+	apply_damage(0.7 * f_loss, DAMAGE_BURN, target_zone, "Explosive blast", DAMAGE_FLAG_EXPLODE)
 
 	// distribute the remaining 30% on all limbs equally (including the one already dealt damage)
-	apply_damage(0.3 * b_loss, DAMAGE_BRUTE, null, DAMAGE_FLAG_EXPLODE | DAMAGE_FLAG_DISPERSED, used_weapon = "Explosive blast")
-	apply_damage(0.3 * f_loss, DAMAGE_BURN, null, DAMAGE_FLAG_EXPLODE | DAMAGE_FLAG_DISPERSED, used_weapon = "Explosive blast")
+	apply_damage(0.3 * b_loss, DAMAGE_BRUTE, null, "Explosive blast", DAMAGE_FLAG_EXPLODE | DAMAGE_FLAG_DISPERSED)
+	apply_damage(0.3 * f_loss, DAMAGE_BURN, null, "Explosive blast", DAMAGE_FLAG_EXPLODE | DAMAGE_FLAG_DISPERSED)
 
 	UpdateDamageIcon()
 
@@ -481,6 +485,9 @@
 		return get_id_name("Unknown")
 	if( head && (head.flags_inv&HIDEFACE) )
 		return get_id_name("Unknown")		//Likewise for hats
+	if(istype(wear_suit, /obj/item/clothing/suit/vaurca/shaper)) //Check for Preimminent Shaper helmet which obscures Hive affiliation
+		var/list/hiveless_name = splittext(real_name, " ") //then remove Hive surname, ignore ID for obvious reason.
+		return hiveless_name[1]
 	var/face_name = get_face_name()
 	var/id_name = get_id_name("")
 	if(id_name && (id_name != face_name))
@@ -821,7 +828,7 @@
 			var/static/list/tags = list()
 			if(!length(tags))
 				for(var/thing in list(TRIAGE_NONE, TRIAGE_GREEN, TRIAGE_YELLOW, TRIAGE_RED, TRIAGE_BLACK))
-					tags[thing] = image(icon = 'icons/mob/screen/triage_tag.dmi', icon_state = thing)
+					tags[thing] = image(icon = 'icons/hud/mob/triage_tag.dmi', icon_state = thing)
 			var/chosen_tag = show_radial_menu(usr, src, tags, radius = 42, tooltips = TRUE)
 			if(chosen_tag)
 				triage_tag = chosen_tag
@@ -886,8 +893,13 @@
 	return
 
 
-/// Returns a number between -1 to 2
+/**
+ * Returns a numerical value between -INFINITY and +INFINITY representing a user's flash protection value.
+ * As a friendly reminder, do not use the == operator on this proc, use >= or <= instead.
+ */
 /mob/living/carbon/human/get_flash_protection(ignore_inherent = FALSE)
+
+	// Handle all the exits first before we do the standard method.
 
 	//Ling
 	var/datum/changeling/changeling = changeling_power(0, 0, 0)
@@ -901,20 +913,24 @@
 	if (I && I.status & ORGAN_CUT_AWAY)
 		return FLASH_PROTECTION_MAJOR
 
-	if (!ignore_inherent && species.inherent_eye_protection)
-		. = max(species.inherent_eye_protection, flash_protection)
-	else
-		return flash_protection
+	// Standard method, sum of modifiers.
+	var/base_flash_protection = flash_protection
 
-	if(HAS_TRAIT(src, TRAIT_ORIGIN_LIGHT_SENSITIVE))
-		return max(. - 1, FLASH_PROTECTION_REDUCED)
+	// Fetch flash protection modifiers via ECS methods.
+	// Anything in this proc that doesn't hook into this signal should eventually be replaced with signal registry methods for simplicity.
+	SEND_SIGNAL(src, COMSIG_GET_FLASH_PROTECTION_MODIFIERS, &base_flash_protection)
+
+	if (!ignore_inherent)
+		base_flash_protection += species.inherent_eye_protection
+
+	return base_flash_protection
 
 /mob/living/carbon/human/flash_act(intensity = FLASH_PROTECTION_MODERATE, override_blindness_check = FALSE, affect_silicon = FALSE, ignore_inherent = FALSE, type = /atom/movable/screen/fullscreen/flash, length = 2.5 SECONDS)
 	if(..())
 		var/obj/item/organ/E = get_eyes(no_synthetic = !affect_silicon)
 		if(istype(E))
 			return E.flash_act(intensity, override_blindness_check, affect_silicon, ignore_inherent, type, length)
-	else if(intensity == get_flash_protection(ignore_inherent))
+	else if(intensity >= get_flash_protection(ignore_inherent))
 		if(prob(20))
 			to_chat(src, SPAN_NOTICE("Something bright flashes in the corner of your vision!"))
 
@@ -1280,8 +1296,8 @@
 /mob/living/carbon/human/succumb()
 	set hidden = TRUE
 
-	if(shock_stage > 50 && (maxHealth * 0.6) > get_total_health())
-		adjustBrainLoss(health + maxHealth * 2) // Deal 2x health in BrainLoss damage, as before but variable.
+	if(shock_stage > 50 && (maxhealth * 0.6) > get_total_health())
+		adjustBrainLoss(health + maxhealth * 2) // Deal 2x health in BrainLoss damage, as before but variable.
 		to_chat(src, SPAN_NOTICE("You have given up life and succumbed to death."))
 	else
 		to_chat(src, SPAN_WARNING("You are not injured enough to succumb to death!"))
@@ -1552,8 +1568,8 @@
 
 	species.handle_post_spawn(src,kpg) // should be zero by default
 
-	maxHealth = species.total_health
-	health = maxHealth
+	maxhealth = species.total_health
+	health = maxhealth
 
 	regenerate_icons()
 	if (vessel)
@@ -2098,7 +2114,7 @@
 
 //Point at which you dun breathe no more. Separate from asystole crit, which is heart-related.
 /mob/living/carbon/human/nervous_system_failure()
-	return getBrainLoss() >= maxHealth * 0.75
+	return getBrainLoss() >= maxhealth * 0.75
 
 // Check if we should die.
 /mob/living/carbon/human/proc/handle_death_check()

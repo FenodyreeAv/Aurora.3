@@ -23,9 +23,9 @@
 	obj_flags = OBJ_FLAG_MOVES_UNSUPPORTED
 	/// Luminosity when on, also used in power calculation.
 	var/brightness_range = 7
-	var/brightness_power = 1
-	var/night_brightness_range = 5
-	var/night_brightness_power = 0.4
+	var/brightness_power = 0.75
+	var/night_brightness_range = 6
+	var/night_brightness_power = 0.3
 	var/supports_nightmode = TRUE
 	var/nightmode = FALSE
 	var/brightness_color = LIGHT_COLOR_HALOGEN
@@ -685,6 +685,12 @@
 	brightness_power = 0.45
 	brightness_color = LIGHT_COLOR_PURPLE
 
+/obj/machinery/light/voidtamer
+	name = "voidtamer light fixture"
+	base_state = "voidtamer"
+	icon_state = "voidtamer_empty"
+	desc = "A lighting fixture, decorated in gold and carp hide."
+
 /obj/machinery/light/spot
 	name = "spotlight fixture"
 	icon_state = "tube_empty"
@@ -722,6 +728,11 @@
 
 /obj/machinery/light/colored/decayed/dimmed
 	brightness_power = 0.2
+
+/obj/machinery/light/colored/beige
+	brightness_color = LIGHT_COLOR_BEIGE
+	randomize_color = FALSE
+	icon_state = "tube_decayed_preview"
 
 //---- Floor lights
 
@@ -802,6 +813,10 @@
 	brightness_range = 6
 	brightness_power = 0.45
 	brightness_color = LIGHT_COLOR_EMERGENCY_SOFT
+	randomize_color = FALSE
+
+/obj/machinery/light/small/floor/beige
+	brightness_color = LIGHT_COLOR_BEIGE
 	randomize_color = FALSE
 
 /obj/machinery/light/small/emergency

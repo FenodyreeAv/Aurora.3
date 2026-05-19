@@ -17,10 +17,14 @@
 #define LIGHT_COLOR_YELLOW			"#E1E17D"
 /// Clear brown, mostly dim. rgb(150, 100, 50)
 #define LIGHT_COLOR_BROWN			"#966432"
+/// Soft, light beige.  rgb(252, 207, 144)
+#define LIGHT_COLOR_BEIGE	"#fccf90"
 /// Mostly pure orange. rgb(250, 150, 50)
 #define LIGHT_COLOR_ORANGE			"#FA9632"
 /// Soft purple. rgb(169, 127, 170)
 #define LIGHT_COLOR_PURPLE			"#A97FAA"
+/// Softer purple. Assunzione lighting. rgb(240,200,240)
+#define LIGHT_COLOR_PALE_PURPLE		"#F0C8F0"
 /// Deep purple. rgb(180, 60, 184)
 #define LIGHT_COLOR_VIOLET			"#B43CB8"
 /// Light red. rgb(232, 86, 86)

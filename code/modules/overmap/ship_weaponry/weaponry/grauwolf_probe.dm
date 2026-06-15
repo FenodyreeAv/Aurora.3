@@ -90,3 +90,4 @@
 	penetrating = 0
 	anti_materiel_potential = 0
 	speed = 40
+	explosion_strength = list(0, 0, 1)

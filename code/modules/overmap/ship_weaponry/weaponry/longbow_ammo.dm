@@ -129,6 +129,7 @@
 	caliber = SHIP_CALIBER_406MM
 	warhead_type = SHIP_AMMO_IMPACT_HE
 	slowdown = 1
+	var/list/explosion_strength = list(6, 8, 10)
 	var/drop_counter = 0
 	var/cookoff_devastation = 0
 	var/cookoff_heavy = 3
@@ -177,6 +178,7 @@
 	icon_state = "armor_piercing_obj"
 	warhead_state = "armor_piercing"
 	warhead_type = SHIP_AMMO_IMPACT_AP
+	explosion_strength = list(4, 6, 8)
 	cookoff_devastation = 0
 	cookoff_heavy = 2
 	cookoff_light = 6
@@ -187,6 +189,7 @@
 	icon_state = "bunker_buster_obj"
 	warhead_state = "bunker_buster"
 	warhead_type = SHIP_AMMO_IMPACT_BUNKERBUSTER
+	explosion_strength = list(1, 2, 4)
 	cookoff_devastation = 0
 	cookoff_heavy = 1
 	cookoff_light = 4

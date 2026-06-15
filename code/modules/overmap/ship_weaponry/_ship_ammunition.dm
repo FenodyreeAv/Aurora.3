@@ -322,9 +322,10 @@
 				H.playsound_local(null, 'sound/effects/explosionfar.ogg', 25)
 				shake_camera(H, 2, 2)
 		..()
-	if(ammo.touch_map_edge(z))
-		ammo.original_projectile = src
-		forceMove(ammo)
+	if(ammo)
+		if(ammo.touch_map_edge(z))
+			ammo.original_projectile = src
+			forceMove(ammo)
 
 /obj/projectile/ship_ammo/on_hit(atom/target, blocked, def_zone, var/is_landmark_hit = FALSE) //is_landmark_hit is TRUE when we hit a landmark on a visitable non-ship overmap object.
 	if(target && !hit_target)

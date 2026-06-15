@@ -65,7 +65,7 @@
 	 * If you so badly need to make one go through *everything*, override check_pierce() for your projectile to always return PROJECTILE_PIERCE_PHASE/HIT.
 	 */
 	/// The "usual" flags of pass_flags is used in that can_hit_target ignores these unless they're specifically targeted/clicked on. This behavior entirely bypasses process_hit if triggered, rather than phasing which uses prehit_pierce() to check.
-	pass_flags = PASSTABLE|PASSRAILING
+	pass_flags = PASSTABLE|PASSRAILING|PASSOPENTURF
 	/// If FALSE, allow us to hit something directly targeted/clicked/whatnot even if we're able to phase through it.
 	var/phasing_ignore_direct_target = FALSE
 	/// Bitflag for things the projectile should just phase through entirely - No hitting unless direct target and [phasing_ignore_direct_target] is FALSE. Uses pass_flags flags.
@@ -690,7 +690,6 @@
 		if (penetrating > pierces)
 			if(prob(min(100, (pierce_chance + (damage/4) + armor_penetration) * anti_materiel_potential))) //Base pierce_chance is 0. This gives the STS a 30% chance to pierce once.
 				damage *= pierce_decay_damage
-				penetrating--
 				last_hit_pierced = TRUE
 				return PROJECTILE_PIERCE_HIT
 

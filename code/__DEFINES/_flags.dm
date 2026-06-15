@@ -58,6 +58,8 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define PASSRAILING	(1<<17)
 /// Allows you to pass over energy shields, these also have additional handling for blocking projectiles in their on_hit().
 #define PASSSHIELD (1<<18)
+/// A fallback flag given to non-dense floor turfs that shouldn't be hit by projectiles. This is only used in the edge case of a wall turf getting destroyed and the projectile tries to hit the floor under it.
+#define PASSOPENTURF (1<<19)
 
 //Movement Types
 #define GROUND (1<<0)

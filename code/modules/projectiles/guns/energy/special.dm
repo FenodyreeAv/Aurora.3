@@ -151,12 +151,15 @@
 	switch(current_mode?.name)
 		if("longbow ap")
 			loaded_ammo = new /obj/item/ship_ammunition/longbow/preset_ap()
-			projectile.penetrating = 1
+			projectile.explosion_strength = list(4, 8, 12)
+			projectile.penetrating = 2
 		if("longbow he")
 			loaded_ammo = new /obj/item/ship_ammunition/longbow/preset_he()
+			projectile.explosion_strength = list(6, 8, 10)
 		if("longbow bunkerbuster")
 			loaded_ammo = new /obj/item/ship_ammunition/longbow/preset_bb()
-			projectile.penetrating = 3
+			projectile.explosion_strength = list(1, 2, 4)
+			projectile.penetrating = 4
 
 	if(!loaded_ammo)
 		return projectile

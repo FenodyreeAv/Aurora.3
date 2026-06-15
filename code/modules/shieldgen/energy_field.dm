@@ -94,49 +94,56 @@
 	 *
 	 * Eg. A 50 damage projectile hits a 9 strength shield. (damage multiplier: 1 - 9/10 = 0.1), (shot damage: = 50 * 0.1 = 5), (final damage: 5 - 9 = -4). Blocked.
 	 */
-	if(energy_field.field_strength < 10) //A strength 10 field will always block a projectile. Without modifications to the engines, one or more upgraded SMES units, or upgrades from research the Horizon cannot generate a field of strength 10 that covers the whole ship.
-		hitting_projectile.damage *= 1 - max(0, energy_field.field_strength / 10)
-		hitting_projectile.damage -= energy_field.field_strength
-		if(hitting_projectile.damage >= 0)
-			damage_field(initial_damage / 10)
-			visible_message(SPAN_WARNING("\The [src] flashes and depletes the [hitting_projectile]'s energy, but doesn't fully block it."))
-			return BULLET_ACT_FORCE_PIERCE
-		else
-			visible_message(SPAN_WARNING("\The [src] shimmers and absorbs \the [hitting_projectile]."))
-			return BULLET_ACT_BLOCK
+	//A strength 10 field will always block a projectile. Without modifications to the engines, one or more upgraded SMES units, or upgrades from research the Horizon cannot generate a field of strength 10 that covers the whole ship.
+	hitting_projectile.damage *= 1 - max(0, energy_field.field_strength / 10)
+	hitting_projectile.damage -= energy_field.field_strength
+	if(hitting_projectile.damage >= 0)
+		damage_field(initial_damage / 10)
+		visible_message(SPAN_WARNING("\The [src] flashes and depletes the [hitting_projectile]'s energy, but doesn't fully block it."))
+		return BULLET_ACT_FORCE_PIERCE
 
-	/**
-	 * An explosive projectile that fails to penetrate will be deleted before it can explode.
-	 * All explosive ship weapons also have high damage, so this only really matters on a strength 10 shield.
-	 * If the projectile is explosive, it deals whatever damage that explosion would have done to the shield.
-	 */
-	if(istype(hitting_projectile, /obj/projectile/ship_ammo))
-		var/obj/projectile/ship_ammo/explosive_projectile = hitting_projectile
-		if(explosive_projectile.explosion_strength[3] || explosive_projectile.explosion_strength[2] || explosive_projectile.explosion_strength[1])
-			for(var/obj/effect/energy_field/shield_tile in energy_field.field)
-				var/distance = get_dist(src, shield_tile)
-				if(distance <= explosive_projectile.explosion_strength[1])
-					shield_tile.damage_field(3)
-				else if(distance <= explosive_projectile.explosion_strength[2])
-					shield_tile.damage_field(2)
-				else if(distance <= explosive_projectile.explosion_strength[3])
-					shield_tile.damage_field(1)
-			// explosive_projectile.explosion_strength = list(0, 0, 0) // Set the explosion strength to 0.
-			visible_message(SPAN_WARNING("\The [src] shimmers and absorbs \the [hitting_projectile]."))
-			return BULLET_ACT_BLOCK
-
-	damage_field(initial_damage / 10)
+	if(!handle_explosion(hitting_projectile))
+		visible_message(SPAN_WARNING("\The [src] shimmers and absorbs \the [hitting_projectile]."))
+		return BULLET_ACT_BLOCK
 
 	. = ..() //If we get down here fall back on normal piercing calculations, for normal projectiles hitting shields.
 	if(. != BULLET_ACT_HIT)
 		return .
+
+/**
+ * An explosive projectile that fails to penetrate will be deleted before it can explode.
+ * All explosive ship weapons also have high damage, so this only really matters on a strength 10 shield.
+ * If the projectile is explosive, it deals whatever damage that explosion would have done to the shield.
+ */
+/obj/effect/energy_field/proc/handle_explosion(var/obj/projectile/hitting_projectile)
+	if(istype(hitting_projectile, /obj/projectile/ship_ammo))
+		var/obj/projectile/ship_ammo/explosive_projectile = hitting_projectile
+		var/field_strength_at_time_of_hit = energy_field.field_strength //We decrease field strength, but we want it's initial value to determine the explosion radius.field_strength.
+		if(explosive_projectile.explosion_strength[3] || explosive_projectile.explosion_strength[2] || explosive_projectile.explosion_strength[1])
+			for(var/obj/effect/energy_field/shield_tile in energy_field.field)
+				var/distance = get_dist(src, shield_tile)
+				if(distance <= explosive_projectile.explosion_strength[1])
+					shield_tile.damage_field(50)
+				else if(distance <= explosive_projectile.explosion_strength[2])
+					shield_tile.damage_field(30)
+				else if(distance <= explosive_projectile.explosion_strength[3])
+					shield_tile.damage_field(10)
+
+			explosive_projectile.explosion_strength[1] = round(max(0, explosive_projectile.explosion_strength[1] - (field_strength_at_time_of_hit / 3)))
+			explosive_projectile.explosion_strength[2] = round(max(0, explosive_projectile.explosion_strength[2] - (field_strength_at_time_of_hit / 2)))
+			explosive_projectile.explosion_strength[3] = round(max(0, explosive_projectile.explosion_strength[3] - (field_strength_at_time_of_hit / 1)))
+
+			if(explosive_projectile.explosion_strength[3] || explosive_projectile.explosion_strength[2] || explosive_projectile.explosion_strength[1])
+				visible_message(SPAN_WARNING("\The [src] fails to contain the explosion and \the [explosive_projectile] detonates!"))
+				return TRUE
+	return FALSE
 
 /obj/effect/energy_field/proc/damage_field(var/severity)
 	if(!severity)
 		return
 
 	damage += severity
-	energy_field.field_strength = max(energy_field.field_strength - (severity / length(energy_field.field)), 0)
+	energy_field.field_strength = max(energy_field.field_strength - ((10 * severity) / length(energy_field.field)), 0)
 
 	if(!(datum_flags & DF_ISPROCESSING))
 		// Start processing ONLY when we're damaged. Through processing, we're going to slowly climb back up to field strength.

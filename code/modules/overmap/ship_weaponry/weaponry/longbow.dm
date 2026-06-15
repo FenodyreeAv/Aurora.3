@@ -13,15 +13,20 @@
 
 /obj/projectile/ship_ammo/longbow
 	icon_state = "heavy"
-	damage = 1000
-	armor_penetration = 1000
+	damage = 300
+	armor_penetration = 100
+	anti_materiel_potential = 10
 	var/penetrated = FALSE
 
 /obj/projectile/ship_ammo/longbow/fire_projectile(projectile_type, atom/target, sound, firer, list/ignore_targets)
+	if(ammo.impact_type == SHIP_AMMO_IMPACT_HE)
+		explosion_strength = list(6, 8, 10)
 	if(ammo.impact_type == SHIP_AMMO_IMPACT_AP)
-		penetrating = 1
+		explosion_strength = list(4, 6, 8)
+		penetrating = 2 //Detonates on the 2nd wall hit.
 	if(ammo.impact_type == SHIP_AMMO_IMPACT_BUNKERBUSTER)
-		penetrating = 3
+		explosion_strength = list(1, 2, 4)
+		penetrating = 4 //Detonates on the 4th wall hit.
 	. = ..()
 
 /obj/projectile/ship_ammo/longbow/on_hit(atom/target, blocked, def_zone, is_landmark_hit)
@@ -30,24 +35,20 @@
 	if(ismob(target))
 		var/mob/M = target
 		M.visible_message(SPAN_DANGER("<font size=5>\The [src] blows [M] apart and punches straight through!</font>"))
-		M.gib()
-	if(isturf(target) || isobj(target))
+		pierces = max(0, pierces - 1) //A mob won't even slow it down.
+
+	if(isobj(target))
+		if(target.should_use_health) //Only an object with more than 200 health will count as a pierced object. This means the shell will penetrate most things that aren't walls.
+			if (target.health <= OBJECT_HEALTH_HIGH)
+				pierces = max(0, pierces - 1)
+
+	if(pierces >= penetrating)
 		switch(ammo.impact_type)
 			if(SHIP_AMMO_IMPACT_AP)
-				if(!penetrated)
-					target.ex_act(1)
-					if(!QDELING(target) && target.density)
-						qdel(target)
-					penetrated = TRUE
-				else
-					explosion(epicenter, 4, 8, 12)
-					qdel(src)
-			if(SHIP_AMMO_IMPACT_HE)
-				explosion(epicenter, 6, 8, 10)
+				target.visible_message(SPAN_DANGER("<font size=5>\The [src] punches straight through \the [target]!</font>"))
+				explosion(epicenter, explosion_strength[1], explosion_strength[2], explosion_strength[3])
 			if(SHIP_AMMO_IMPACT_BUNKERBUSTER)
 				target.visible_message(SPAN_DANGER("<font size=5>\The [src] punches straight through \the [target]!</font>"))
-				explosion(epicenter, 1, 2, 4)
-				target.ex_act(1)
-				if(!QDELING(target) && target.density)
-					qdel(target)
-		return TRUE
+				explosion(epicenter, explosion_strength[1], explosion_strength[2], explosion_strength[3])
+			if(SHIP_AMMO_IMPACT_HE)
+				explosion(epicenter, explosion_strength[1], explosion_strength[2], explosion_strength[3])

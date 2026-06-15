@@ -51,6 +51,6 @@
 	name = "armor-piercing flak"
 	damage = 50
 	armor_penetration = 50
-	penetrating = 8
+	penetrating = 5
 	anti_materiel_potential = 8
 	explosion_strength = list(0, 1, 2)

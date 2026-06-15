@@ -18,6 +18,7 @@
 	var/initial_flooring
 	var/singleton/flooring/flooring
 	var/mineral = DEFAULT_WALL_MATERIAL
+	pass_flags_self = PASSOPENTURF
 
 	thermal_conductivity = 0.040
 	heat_capacity = 10000

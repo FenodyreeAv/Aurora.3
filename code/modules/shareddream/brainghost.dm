@@ -6,7 +6,8 @@
 	alpha = 200
 
 	var/mob/living/carbon/human/body = null
-
+	var/psychic_sensitivity = 1
+	var/attacktext = "psychically assaults"
 
 /mob/living/brain_ghost/Initialize(mapload, mob/living/carbon/human/dreamer)
 	. = ..()
@@ -20,6 +21,8 @@
 
 	name = body.real_name
 	old_mob = body
+
+	psychic_sensitivity = body.check_psi_sensitivity()
 
 	var/mutable_appearance/MA = new(body)
 	MA.appearance_flags |= KEEP_APART | RESET_TRANSFORM
@@ -102,3 +105,33 @@
 
 /mob/living/brain_ghost/get_floating_chat_y_offset()
 	return 8
+
+/mob/living/brain_ghost/UnarmedAttack(var/atom/A, var/proximity_flag)
+	if(!..())
+		return
+	if(!istype(A,/mob/living/simple_animal)) //Only allowed to attack Psirens.
+		return
+	if(istype(A,/mob/living))
+		if(ckey)
+			add_logs(src, A, attacktext)
+	setClickCooldown(DEFAULT_ATTACK_COOLDOWN)
+
+	var/damage = 5 * (2 ** psychic_sensitivity) //0.5x damage at -1 sensitivity, 1x damage at 0 sensitivity, 2x damage at 1 sensitivity, etc.
+
+	if(A.attack_generic(src, damage, attacktext, 0, 0, 0) && loc && 'sound/effects/psi/power_evoke.ogg')
+		playsound(loc, 'sound/effects/psi/power_evoke.ogg', 50, 1, 1)
+
+/mob/living/brain_ghost/attack_generic(mob/user, damage, attack_message, environment_smash, armor_penetration, attack_flags, damage_type)
+	if(body.has_psionics()) //If you are psionic, your psychic stamina represents your health.
+		if (body.psi.stamina >= damage * 2) //Can't use spend_power, because it has an incapacitation check, and your body will be asleep.
+			body.psi.stamina -= damage
+		else
+			body.psi.backblast(abs(body.psi.stamina - damage * 2))
+			body.psi.stamina = 0
+			to_chat(body, SPAN_DANGER("The psiren's psychic assault tears through the last of your mental defenses, you are ripped from the srom!"))
+			awaken_impl(TRUE)
+			try_deal_psychic_damage(body, user, damage * -2, 1, 0)
+	else //If a Skrell brought you in here as a non-psychic, a Psiren will kick you out immediately.
+		to_chat(body, SPAN_DANGER("The psiren's psychic assault tears through your mind, you are ripped from the srom in agony!"))
+		awaken_impl(TRUE)
+		try_deal_psychic_damage(body, user, damage * -4, 1, 0)

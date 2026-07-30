@@ -20,6 +20,8 @@
 		var/obj/spellbutton/spell = new(H, spell_path, name, icon_state)
 		H.ability_master.add_psionic_ability(spell, icon_state, src, H)
 		H.psi.psionic_powers |= type
+		if (ispath(spell_path, /obj/item/spell/commune) && !H.GetComponent(/datum/component/skill/commune))
+			H.AddComponent(/datum/component/skill/commune)
 		return TRUE
 	else
 		log_debug("Psionic power [src.name] given to mob [H] without ability master!")

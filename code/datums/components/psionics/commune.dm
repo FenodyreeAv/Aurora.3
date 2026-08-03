@@ -14,10 +14,25 @@
 
 	to_chat(owner, SPAN_NOTICE("You prepare yourself to commune with others. Left click on yourself to search for familiar minds and familiarize yourself with those in sight. Left click on another person to instead share direct words with them."))
 	RegisterSignal(owner, COMSIG_MOB_CLICKON, PROC_REF(get_target), override = TRUE)
+	commune_mouse_cursor_on()
+
+/datum/action/commune/proc/commune_mouse_cursor_on()
+	if (!owner || !owner.client)
+		return
+
+	if(owner.client?.mouse_pointer_icon == initial(owner.client.mouse_pointer_icon))
+		owner.client.mouse_pointer_icon = icon(button_icon, button_icon_state)
+
+/datum/action/commune/proc/commune_mouse_cursor_off()
+	if (!owner || !owner.client)
+		return
+
+	owner.client.mouse_pointer_icon = initial(owner.client.mouse_pointer_icon)
 
 /datum/action/commune/proc/get_target(owner, atom/target, modifiers)
 	SIGNAL_HANDLER
 	UnregisterSignal(owner, COMSIG_MOB_CLICKON)
+	commune_mouse_cursor_off()
 	if (. == COMSIG_MOB_CANCEL_CLICKON)
 		return . // Another signal-handler already got to it.
 
@@ -35,7 +50,7 @@
 	owner.visible_message(SPAN_NOTICE("[owner] prepares to commune with those around them."))
 	var/speech_text = GET_COMMUNE_TEXT(owner)
 	if (!speech_text)
-		owner.visible_message(SPAN_NOTICE("[owner] has stopped speaking."))
+		owner.visible_message(SPAN_NOTICE("[owner] has stopped communing."))
 		return
 
 	owner.say(speech_text)
@@ -45,32 +60,41 @@
 	if (!istype(owner) || !istype(target))
 		return
 
-	if (!target.client)
-		to_chat(owner, SPAN_NOTICE("[target] cannot hear your commune."))
-		return
-
 	owner.visible_message(SPAN_NOTICE("[owner] prepares to commune with [target]."))
-	var/speech_type = GET_COMMUNE_TYPE(owner)
 	var/speech_text = GET_COMMUNE_TEXT(owner)
 	if (!speech_text)
-		owner.visible_message(SPAN_NOTICE("[owner] has stopped speaking."))
+		owner.visible_message(SPAN_NOTICE("[owner] has stopped communing."))
 		return
 
-	switch(speech_type)
-		if ("Say")
-			if (get_dist(owner, target) >= 7)
-				to_chat(owner, SPAN_NOTICE("You must be closer to [target] to commune with them"))
-				return
-			owner.say(speech_text)
-		if ("Whisper")
-			if (get_dist(owner, target) >= 2)
-				to_chat(owner, SPAN_NOTICE("You must be adjacent to [target] to whisper to them"))
-				return
-			owner.whisper(speech_text)
-		if ("Emote")
-			if (get_dist(owner, target) >= 7)
-				to_chat(owner, SPAN_NOTICE("You must be closer to [target] to commune with them"))
-			owner.emote(speech_text)
+	speech_text = formalize_text(speech_text)
+
+	if (target.stat == DEAD)
+		to_chat(owner, SPAN_WARNING("Not even a psion of your level can speak to the dead."))
+		return
+
+	var/psi_blocked = target.is_psi_blocked(owner, FALSE)
+	if (psi_blocked)
+		to_chat(owner, psi_blocked)
+		return
+
+	log_say("[key_name(owner)] communed to [key_name(target)]: [speech_text]")
+
+	to_chat(owner, SPAN_CULT("You psionically say to [target]: [speech_text]"))
+
+	for (var/mob/M in GLOB.dead_mob_list)
+		if (M.client.prefs.toggles & CHAT_GHOSTEARS)
+			to_chat(M, "<span class='notice'>[owner] psionically says to [target]:</span> [speech_text]")
+
+	var/mob/living/carbon/human/H = target
+	var/target_sensitivity = H.check_psi_sensitivity()
+	if (target_sensitivity >= 1)
+		to_chat(H, SPAN_NOTICE("<i>[owner] blinks, their eyes briefly developing an unnatural shine.</i>"))
+		to_chat(H, SPAN_CULT("<b>You instinctively sense [owner] passing a thought into your mind:</b> [speech_text]"))
+	else if (target_sensitivity >= 0)
+		to_chat(H, SPAN_ALIEN("<b>A thought from outside your consciousness slips into your mind:</b> [speech_text]"))
+	else
+		var/scrambled_message = stars(speech_text, (abs(target_sensitivity) * 25))
+		to_chat(H, SPAN_ALIEN("<b>A half-formed thought passes through your mind:</b> [scrambled_message]"))
 
 /**
  * Component used for the Commune action.
